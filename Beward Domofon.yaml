@@ -1,5 +1,5 @@
 zabbix_export:
-  version: '7.2'
+  version: '7.4'
   template_groups:
     - uuid: 163ac1f195104edaae80a2259d00c004
       name: Domofonia
@@ -30,9 +30,12 @@ zabbix_export:
           url: 'http://{HOST.CONN}/cgi-bin/systeminfo_cgi?action=get'
           triggers:
             - uuid: e12c78675b0b46e388c70f7a9125f7b4
-              expression: 'last(/Beward Domofon/DeviceID)>0'
+              expression: 'last(/Beward Domofon/DeviceID)=0'
+              correlation_mode: TAG_VALUE
+              correlation_tag: 'New DeviceID'
               name: 'New DeviceID'
               priority: INFO
+              manual_close: 'YES'
         - uuid: e1c70b9855ae4e82ac99aa573362716c
           name: HostName
           type: HTTP_AGENT
@@ -47,7 +50,7 @@ zabbix_export:
           preprocessing:
             - type: REGEX
               parameters:
-                - HostName=(\d+)
+                - 'HostName=(.*)'
                 - \1
           url: 'http://{HOST.CONN}/cgi-bin/systeminfo_cgi?'
         - uuid: 427e63c5b9d3429e91518ccd6297b1b1
@@ -108,6 +111,59 @@ zabbix_export:
           history: 90d
           value_type: TEXT
           inventory_link: MACADDRESS_A
+        - uuid: 46bfd485fae64d93bb15c4f2c2d5558e
+          name: locked
+          type: HTTP_AGENT
+          key: locked
+          value_type: TEXT
+          url: 'http://admin:kJpq-93p@{HOST.CONN}/cgi-bin/intercom_cgi?action=locked'
+          query_fields:
+            - name: Authorization
+              value: 'Basic <base64(admin:kJpq-93p)>'
+        - uuid: 9b10298c0ad34e00a26fb6dd5b959d7a
+          name: locked_main
+          type: DEPENDENT
+          key: locked_main
+          value_type: TEXT
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - ^(\d+)\s
+                - \1
+            - type: JAVASCRIPT
+              parameters:
+                - |
+                  if (value == "1") return "Включён";
+                  else return "Выключен"
+          master_item:
+            key: locked
+          triggers:
+            - uuid: e8e0e115277b419a818bcb1b55eb24d0
+              expression: 'last(/Beward Domofon/locked_main)<1'
+              name: locked_main_open
+              priority: WARNING
+        - uuid: 2cf5162e8a4e457589bc114a7d42e8a6
+          name: locked_secondary
+          type: DEPENDENT
+          key: locked_secondary
+          value_type: TEXT
+          preprocessing:
+            - type: REGEX
+              parameters:
+                - \s(\d+)$
+                - \1
+            - type: JAVASCRIPT
+              parameters:
+                - |
+                  if (value == "1") return "Включён";
+                       else return "Выключен"
+          master_item:
+            key: locked
+          triggers:
+            - uuid: a8bcd0ab7efa449c9f191261a2280205
+              expression: 'last(/Beward Domofon/locked_secondary)=0'
+              name: locked_secondary_open
+              priority: WARNING
         - uuid: 135d179eba914fca80a74f22e7579832
           name: 'Reg Status SIP1'
           type: HTTP_AGENT
