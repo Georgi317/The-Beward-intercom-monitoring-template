@@ -19,8 +19,8 @@ zabbix_export:
           key: DeviceID
           value_type: TEXT
           authtype: BASIC
-          username: admin
-          password: kJpq-93p
+          username: {$BEWARD.API.USER}
+          password: {$BEWARD.API.PASSWORD}
           inventory_link: SERIALNO_A
           preprocessing:
             - type: REGEX
